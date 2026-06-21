@@ -1,0 +1,1598 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bellu — Agendamento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://sdk.mercadopago.com/js/v2"></script>
+<style>
+:root {
+  --cream: #FAF8F4;
+  --dark: #1A1410;
+  --gold: #C9A84C;
+  --gold-light: #F0D98B;
+  --gold-pale: #FDF6E3;
+  --rose: #D4837A;
+  --rose-light: #F5E6E4;
+  --text: #2C2419;
+  --text-muted: #7A6E65;
+  --border: #E8E0D4;
+  --white: #FFFFFF;
+  --success: #4A7C59;
+  --success-bg: #EAF3EE;
+  --danger: #B04040;
+  --danger-bg: #F9ECEC;
+  --warning: #996B20;
+  --warning-bg: #FEF6E4;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 4px 32px rgba(26,20,16,0.10);
+  --shadow-sm: 0 2px 12px rgba(26,20,16,0.07);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--cream);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── SCREENS ── */
+.screen { display: none; min-height: 100vh; flex-direction: column; }
+.screen.active { display: flex; }
+
+/* ── TOPBAR ── */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 24px 14px;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 100;
+}
+.topbar-brand { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: var(--dark); letter-spacing: -.3px; }
+.topbar-brand span { color: var(--gold); }
+.topbar-back { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--text-muted); cursor: pointer; border: none; background: none; padding: 4px 0; font-family: inherit; }
+.topbar-back:hover { color: var(--dark); }
+.topbar-step { font-size: 12px; color: var(--text-muted); font-weight: 500; background: var(--cream); padding: 4px 12px; border-radius: 20px; }
+
+/* ── HERO ── */
+.hero {
+  background: var(--dark);
+  padding: 48px 24px 40px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; top: -60px; right: -60px;
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(201,168,76,.25) 0%, transparent 70%);
+  border-radius: 50%;
+}
+.hero::after {
+  content: '';
+  position: absolute; bottom: -40px; left: -40px;
+  width: 160px; height: 160px;
+  background: radial-gradient(circle, rgba(212,131,122,.18) 0%, transparent 70%);
+  border-radius: 50%;
+}
+.hero-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); margin-bottom: 12px; }
+.hero-title { font-family: 'Playfair Display', serif; font-size: 34px; font-weight: 700; color: var(--white); line-height: 1.2; margin-bottom: 10px; }
+.hero-title em { color: var(--gold-light); font-style: italic; }
+.hero-sub { font-size: 14px; color: rgba(255,255,255,.55); font-weight: 300; }
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 14px 24px; border-radius: var(--radius-sm); border: none;
+  font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500;
+  cursor: pointer; transition: all .2s; text-decoration: none; width: 100%;
+}
+.btn-gold { background: var(--gold); color: var(--dark); }
+.btn-gold:hover { background: #B8922E; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(201,168,76,.35); }
+.btn-dark { background: var(--dark); color: var(--white); }
+.btn-dark:hover { background: #2e261e; }
+.btn-outline { background: transparent; color: var(--text); border: 1.5px solid var(--border); }
+.btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+.btn-sm { padding: 9px 16px; font-size: 13px; border-radius: 8px; }
+.btn-icon { width: auto; padding: 10px 14px; }
+.btn:disabled { opacity: .4; cursor: not-allowed; transform: none !important; }
+
+/* ── CARDS ── */
+.card {
+  background: var(--white); border-radius: var(--radius);
+  border: 1px solid var(--border); padding: 20px;
+  box-shadow: var(--shadow-sm);
+}
+.card-hover { cursor: pointer; transition: all .2s; }
+.card-hover:hover { border-color: var(--gold); box-shadow: var(--shadow); transform: translateY(-2px); }
+.card-hover.selected { border-color: var(--gold); background: var(--gold-pale); box-shadow: 0 0 0 2px var(--gold); }
+
+/* ── FORM ── */
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-label { font-size: 12px; font-weight: 600; color: var(--text-muted); letter-spacing: .04em; text-transform: uppercase; }
+.form-input {
+  padding: 12px 14px; border-radius: var(--radius-sm); border: 1.5px solid var(--border);
+  font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--text);
+  background: var(--white); transition: border-color .2s; outline: none;
+}
+.form-input:focus { border-color: var(--gold); }
+.form-input::placeholder { color: #C0B8AE; }
+
+/* ── BADGE ── */
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+.badge-gold { background: var(--gold-pale); color: var(--warning); border: 1px solid rgba(201,168,76,.3); }
+.badge-success { background: var(--success-bg); color: var(--success); }
+.badge-rose { background: var(--rose-light); color: var(--rose); }
+.badge-danger { background: var(--danger-bg); color: var(--danger); }
+
+/* ── SECTION ── */
+.section { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+.section-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 600; color: var(--dark); }
+.section-sub { font-size: 13px; color: var(--text-muted); margin-top: -8px; }
+
+/* ── DIVIDER ── */
+.divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+/* ── AVATAR ── */
+.avatar {
+  width: 48px; height: 48px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 600; font-size: 16px; flex-shrink: 0;
+}
+
+/* ── PROGRESS ── */
+.progress-bar {
+  height: 3px; background: var(--border); border-radius: 2px; overflow: hidden;
+}
+.progress-fill { height: 100%; background: var(--gold); border-radius: 2px; transition: width .4s ease; }
+
+/* ── TABS ── */
+.tabs { display: flex; background: var(--cream); border-radius: var(--radius-sm); padding: 3px; gap: 2px; }
+.tab-btn { flex: 1; padding: 9px 8px; border-radius: 8px; border: none; background: transparent; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: all .2s; }
+.tab-btn.active { background: var(--white); color: var(--dark); box-shadow: var(--shadow-sm); }
+
+/* ── TIME SLOTS ── */
+.time-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.time-slot {
+  padding: 10px 6px; border-radius: 8px; border: 1.5px solid var(--border);
+  background: var(--white); text-align: center; font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all .2s; color: var(--text);
+}
+.time-slot:hover { border-color: var(--gold); }
+.time-slot.selected { border-color: var(--gold); background: var(--gold-pale); color: var(--warning); }
+.time-slot.taken { background: var(--cream); color: var(--border); cursor: not-allowed; text-decoration: line-through; }
+
+/* ── CALENDAR ── */
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-day-label { text-align: center; font-size: 11px; font-weight: 600; color: var(--text-muted); padding: 6px 0; letter-spacing: .05em; text-transform: uppercase; }
+.cal-day {
+  aspect-ratio: 1; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 500; cursor: pointer; transition: all .18s; color: var(--text);
+}
+.cal-day:hover:not(.disabled):not(.empty) { background: var(--gold-pale); }
+.cal-day.today { font-weight: 700; color: var(--gold); }
+.cal-day.selected { background: var(--gold); color: var(--dark); font-weight: 700; }
+.cal-day.disabled { color: var(--border); cursor: not-allowed; }
+.cal-day.empty { cursor: default; }
+
+/* ── SUMMARY ROW ── */
+.summary-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--border); gap: 12px; }
+.summary-row:last-child { border-bottom: none; }
+.summary-key { font-size: 13px; color: var(--text-muted); }
+.summary-val { font-size: 14px; font-weight: 500; color: var(--dark); text-align: right; }
+.summary-total .summary-key { font-size: 15px; font-weight: 600; color: var(--dark); }
+.summary-total .summary-val { font-size: 18px; font-weight: 700; color: var(--dark); }
+
+/* ── PAYMENT ── */
+.payment-method {
+  display: flex; align-items: center; gap: 14px; padding: 14px 16px;
+  border-radius: var(--radius-sm); border: 1.5px solid var(--border);
+  cursor: pointer; transition: all .2s; background: var(--white);
+}
+.payment-method:hover { border-color: var(--gold); }
+.payment-method.selected { border-color: var(--gold); background: var(--gold-pale); }
+.payment-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+
+/* ── NOTIFICATION TOAST ── */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+  background: var(--dark); color: var(--white); padding: 14px 20px; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 500; z-index: 9999; transition: transform .3s ease;
+  white-space: nowrap; box-shadow: var(--shadow); display: flex; align-items: center; gap: 8px;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.toast-success { background: var(--success); }
+
+/* ── ADMIN PANEL ── */
+.admin-stat { text-align: center; }
+.admin-stat-num { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 700; color: var(--dark); }
+.admin-stat-label { font-size: 12px; color: var(--text-muted); font-weight: 500; margin-top: 2px; }
+
+.appt-row {
+  display: flex; align-items: center; gap: 12px; padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.appt-row:last-child { border-bottom: none; }
+.appt-info { flex: 1; }
+.appt-name { font-size: 14px; font-weight: 600; color: var(--dark); }
+.appt-detail { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.appt-time { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; text-align: right; }
+
+/* ── SCROLL ── */
+.scroll-x { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+.scroll-x::-webkit-scrollbar { display: none; }
+
+/* ── PROFESSIONAL CARD ── */
+.prof-card { flex-shrink: 0; width: 110px; text-align: center; }
+.prof-avatar-wrap { position: relative; margin: 0 auto 8px; width: 64px; }
+.prof-avatar {
+  width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; font-size: 22px; font-weight: 700; border: 2px solid var(--border);
+  transition: border-color .2s;
+}
+.prof-card.selected .prof-avatar { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,.25); }
+.prof-dot { width: 10px; height: 10px; background: #5CB07A; border: 2px solid var(--white); border-radius: 50%; position: absolute; bottom: 2px; right: 2px; }
+.prof-name { font-size: 12px; font-weight: 600; color: var(--dark); }
+.prof-role { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--white); border-top: 1px solid var(--border);
+  display: flex; padding: 10px 0 20px; z-index: 200;
+}
+.nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; padding: 4px; }
+.nav-icon { font-size: 20px; }
+.nav-label { font-size: 10px; font-weight: 500; color: var(--text-muted); }
+.nav-item.active .nav-label { color: var(--gold); font-weight: 600; }
+
+/* ── MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(26,20,16,.55); z-index: 500;
+  display: flex; align-items: flex-end; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity .25s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal-sheet {
+  background: var(--white); border-radius: 24px 24px 0 0; padding: 8px 24px 48px;
+  width: 100%; max-width: 480px; transform: translateY(100%); transition: transform .3s ease;
+}
+.modal-overlay.open .modal-sheet { transform: translateY(0); }
+.modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto 20px; }
+
+/* ── CONFIRMATION ── */
+.confirm-icon { width: 72px; height: 72px; border-radius: 50%; background: var(--success-bg); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 32px; }
+.confirm-code { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; color: var(--dark); letter-spacing: 2px; }
+.confirm-sub { font-size: 13px; color: var(--text-muted); margin-top: 6px; line-height: 1.5; }
+
+/* ── MAX WIDTH ── */
+.page-wrap { max-width: 480px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; flex: 1; }
+
+/* ── ANIM ── */
+@keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+.fade-up { animation: fadeUp .35s ease both; }
+.fade-up-1 { animation-delay: .05s; }
+.fade-up-2 { animation-delay: .12s; }
+.fade-up-3 { animation-delay: .2s; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ SCREEN: HOME ══════════════════ -->
+<div class="screen active" id="screen-home">
+  <div class="page-wrap">
+    <div class="topbar">
+      <span class="topbar-brand">Bel<span>lu</span></span>
+      <button class="btn btn-sm btn-outline" onclick="goAdmin()" style="width:auto">⚙ Painel</button>
+    </div>
+
+    <div class="hero">
+      <div class="hero-eyebrow">Salão & Estética</div>
+      <h1 class="hero-title">Beleza no seu <em>tempo</em></h1>
+      <p class="hero-sub">Agende com facilidade, sem filas e sem surpresas.</p>
+    </div>
+
+    <div class="section fade-up">
+      <div class="section-title">Serviços em destaque</div>
+      <div style="display:flex;flex-direction:column;gap:10px;" id="service-list-home"></div>
+    </div>
+
+    <div class="section" style="padding-top:0">
+      <button class="btn btn-gold fade-up fade-up-2" onclick="goTo('screen-services')">
+        ✦ Agendar agora
+      </button>
+      <button class="btn btn-outline fade-up fade-up-3" onclick="goTo('screen-login')">
+        Entrar na minha conta
+      </button>
+    </div>
+    <div style="height: 20px;"></div>
+  </div>
+</div>
+
+<!-- ══════════════════ SCREEN: LOGIN ══════════════════ -->
+<div class="screen" id="screen-login">
+  <div class="page-wrap">
+    <div class="topbar">
+      <button class="topbar-back" onclick="goTo('screen-home')">← Voltar</button>
+      <span class="topbar-brand">Bel<span>lu</span></span>
+      <span style="width:60px"></span>
+    </div>
+    <div class="section" style="flex:1;justify-content:center;padding-top:40px">
+      <div class="fade-up">
+        <div class="section-title" style="margin-bottom:4px">Bem-vinda de volta ✦</div>
+        <p class="section-sub" style="margin-top:4px">Entre para ver seus agendamentos</p>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px;" class="fade-up fade-up-1">
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" type="email" placeholder="seu@email.com" id="login-email">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Telefone</label>
+          <input class="form-input" type="tel" placeholder="(11) 99999-0000" id="login-phone">
+        </div>
+        <button class="btn btn-gold" onclick="doLogin()">Entrar</button>
+        <button class="btn btn-outline" onclick="goTo('screen-register')">Criar conta grátis</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SCREEN: REGISTER ══════════════════ -->
+<div class="screen" id="screen-register">
+  <div class="page-wrap">
+    <div class="topbar">
+      <button class="topbar-back" onclick="goTo('screen-login')">← Voltar</button>
+      <span class="topbar-brand">Bel<span>lu</span></span>
+      <span style="width:60px"></span>
+    </div>
+    <div class="section" style="padding-top:32px">
+      <div class="fade-up">
+        <div class="section-title">Cadastro rápido ✦</div>
+        <p class="section-sub" style="margin-top:4px">Leva menos de 1 minuto</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;" class="fade-up fade-up-1">
+        <div class="form-group">
+          <label class="form-label">Nome completo</label>
+          <input class="form-input" type="text" placeholder="Ana Silva" id="reg-name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" type="email" placeholder="seu@email.com" id="reg-email">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Telefone / WhatsApp</label>
+          <input class="form-input" type="tel" placeholder="(11) 99999-0000" id="reg-phone">
+        </div>
+        <button class="btn btn-gold" onclick="doRegister()">Criar conta e agendar →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SCREEN: SERVICES ══════════════════ -->
+<div class="screen" id="screen-services">
+  <div class="page-wrap">
+    <div class="topbar">
+      <button class="topbar-back" onclick="goTo('screen-home')">← Início</button>
+      <span class="topbar-brand">Bel<span>lu</span></span>
+      <span class="topbar-step">1 de 4</span>
+    </div>
+    <div class="progress-bar" style="margin:0"><div class="progress-fill" style="width:25%"></div></div>
+
+    <div class="section">
+      <div class="fade-up">
+        <div class="section-title">Escolha o serviço</div>
+        <p class="section-sub">Selecione um para continuar</p>
+      </div>
+      <div class="tabs fade-up fade-up-1" id="cat-tabs"></div>
+      <div style="display:flex;flex-direction:column;gap:10px;" id="service-list" class="fade-up fade-up-2"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SCREEN: PROFESSIONALS ══════════════════ -->
+<div class="screen" id="screen-professionals">
+  <div class="page-wrap">
+    <div class="topbar">
+      <button class="topbar-back" onclick="goTo('screen-services')">← Serviço</button>
+      <span class="topbar-brand">Bel<span>lu</span></span>
+      <span class="topbar-step">2 de 4</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:50%"></div></div>
+
+    <div class="section">
+      <div class="fade-up">
+        <div class="section-title">Escolha a profissional</div>
+        <p class="section-sub">Todas disponíveis para o serviço selecionado</p>
+      </div>
+      <div class="scroll-x fade-up fade-up-1" id="prof-list"></div>
+
+      <div id="prof-detail" style="display:none" class="fade-up fade-up-2"></div>
+
+      <button class="btn btn-gold fade-up fade-up-3" id="btn-to-schedule" disabled onclick="goTo('screen-schedule')">
+        Escolher horário →
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SCREEN: SCHEDULE ══════════════════ -->
+<div class="screen" id="screen-schedule">
+  <div class="page-wrap">
+    <div class="topbar">
+      <button class="topbar-back" onclick="goTo('screen-professionals')">← Profissional</button>
+      <span class="topbar-brand">Bel<span>lu</span></span>
+      <span class="topbar-step">3 de 4</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:75%"></div></div>
+
+    <div class="section">
+      <div class="fade-up">
+        <div class="section-title">Escolha a data</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px" id="cal-header"></div>
+      </div>
+      <div class="card fade-up fade-up-1" style="padding:14px">
+        <div class="cal-grid" id="cal-weekdays"></div>
+        <div class="cal-grid" style="margin-top:4px" id="cal-days"></div>
+      </div>
+
+      <div id="time-section" style="display:none" class="fade-up">
+        <div class="section-title" style="font-size:16px">Horários disponíveis</div>
+        <p class="section-sub" id="time-sub"></p>
+        <div class="time-grid" id="time-slots"></div>
+      </div>
+
+      <button class="btn btn-gold" id="btn-to-payment" disabled onclick="goCheckout()" style="margin-top:8px">
+        Confirmar horário →
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SCREEN: CHECKOUT ══════════════════ -->
+<div class="screen" id="screen-checkout">
+  <div class="page-wrap">
+    <div class="topbar">
+      <button class="topbar-back" onclick="goTo('screen-schedule')">← Horário</button>
+      <span class="topbar-brand">Bel<span>lu</span></span>
+      <span class="topbar-step">4 de 4</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>
+
+    <div class="section">
+      <div class="fade-up">
+        <div class="section-title">Confirmação &amp; pagamento</div>
+        <p class="section-sub">Revise os detalhes antes de confirmar</p>
+      </div>
+
+      <!-- Resumo -->
+      <div class="card fade-up fade-up-1" id="checkout-summary"></div>
+
+      <!-- Info 10% -->
+      <div class="card fade-up" style="border-color:#C9A84C;background:var(--gold-pale)">
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <span style="font-size:24px">🔒</span>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--dark);margin-bottom:4px">Reserva garantida com 10%</div>
+            <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Pague agora apenas <strong id="deposit-val" style="color:var(--warning)">R$ —</strong>. O restante é pago no salão.</div>
+          </div>
+        </div>
+        <div style="margin-top:12px;padding:10px;background:white;border-radius:8px;font-size:12px;color:var(--text-muted);line-height:1.7">
+          ✓ Cancelamento &gt;24h: reembolso 100%<br>
+          ✓ Cancelamento 2–24h: reembolso 50%<br>
+          ✗ No-show / &lt;2h: sem reembolso
+        </div>
+      </div>
+
+      <!-- Dados do cliente -->
+      <div class="card fade-up" id="guest-form">
+        <div style="font-size:13px;font-weight:600;color:var(--dark);margin-bottom:12px">Seus dados</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <input class="form-input" type="text"  placeholder="Nome completo *"        id="guest-name">
+          <input class="form-input" type="email" placeholder="Email *"                id="guest-email">
+          <input class="form-input" type="tel"   placeholder="WhatsApp (11) 99999-0000" id="guest-phone">
+          <input class="form-input" type="text"  placeholder="CPF (apenas números) *" id="guest-cpf" maxlength="14">
+        </div>
+      </div>
+
+      <!-- Seleção do método -->
+      <div class="fade-up">
+        <div style="font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">Como deseja pagar?</div>
+        <div style="display:flex;gap:8px">
+          <div class="payment-method selected" id="pay-pix" onclick="selectPay('pix')" style="flex:1;flex-direction:column;align-items:center;padding:16px 8px;text-align:center">
+            <div style="font-size:28px;margin-bottom:6px">💚</div>
+            <div style="font-size:14px;font-weight:600">Pix</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Instantâneo</div>
+            <div style="font-size:16px;margin-top:6px" id="check-pix">✓</div>
+          </div>
+          <div class="payment-method" id="pay-card" onclick="selectPay('card')" style="flex:1;flex-direction:column;align-items:center;padding:16px 8px;text-align:center">
+            <div style="font-size:28px;margin-bottom:6px">💳</div>
+            <div style="font-size:14px;font-weight:600">Cartão</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Crédito</div>
+            <div style="font-size:16px;margin-top:6px;opacity:0" id="check-card">✓</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Formulário cartão (MP.js) -->
+      <div id="card-form-section" style="display:none" class="fade-up">
+        <div class="card" style="padding:16px">
+          <div style="font-size:13px;font-weight:600;color:var(--dark);margin-bottom:14px">Dados do cartão</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <!-- MP.js injeta o campo de número do cartão aqui com segurança -->
+            <div>
+              <div class="form-label" style="margin-bottom:6px">Número do cartão</div>
+              <div id="mp-card-number" style="border:1.5px solid var(--border);border-radius:10px;padding:0 14px;background:white;height:48px;display:flex;align-items:center;overflow:hidden"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div>
+                <div class="form-label" style="margin-bottom:6px">Validade</div>
+                <div id="mp-expiration-date" style="border:1.5px solid var(--border);border-radius:10px;padding:0 14px;background:white;height:48px;display:flex;align-items:center;overflow:hidden"></div>
+              </div>
+              <div>
+                <div class="form-label" style="margin-bottom:6px">CVV</div>
+                <div id="mp-security-code" style="border:1.5px solid var(--border);border-radius:10px;padding:0 14px;background:white;height:48px;display:flex;align-items:center;overflow:hidden"></div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nome no cartão</label>
+              <input class="form-input" type="text" id="card-holder-name" placeholder="Como está no cartão" style="height:48px">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Parcelas</label>
+              <select class="form-input" id="card-installments">
+                <option value="1">1x sem juros</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:12px">
+            <span style="font-size:11px;color:var(--text-muted)">🔒 Dados criptografados pelo Mercado Pago</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Aviso de ambiente de teste -->
+      <div id="sandbox-banner" style="background:var(--warning-bg);border:1px solid #e0a020;border-radius:10px;padding:10px 14px;font-size:12px;color:var(--warning)">
+        ⚠️ <strong>Modo de teste ativo.</strong> Nenhuma cobrança real será feita.
+        Use cartão: <strong>4509 9535 6623 3704</strong> | CVV: 123 | Val: 11/25
+      </div>
+
+      <!-- Estado de carregamento/erro -->
+      <div id="payment-loading" style="display:none;text-align:center;padding:20px">
+        <div style="font-size:32px;margin-bottom:8px">⏳</div>
+        <div style="font-size:14px;font-weight:500;color:var(--dark)" id="payment-loading-msg">Processando pagamento...</div>
+      </div>
+      <div id="payment-error" style="display:none;background:var(--danger-bg);border:1px solid var(--danger);border-radius:10px;padding:14px;font-size:13px;color:var(--danger)"></div>
+
+      <!-- Pix: exibe QR code após gerar -->
+      <div id="pix-qr-section" style="display:none" class="card">
+        <div style="text-align:center">
+          <div style="font-size:14px;font-weight:600;color:var(--dark);margin-bottom:4px">Escaneie o QR Code</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Abra o app do seu banco e escaneie</div>
+          <img id="pix-qr-img" src="" alt="QR Code Pix" style="width:180px;height:180px;margin:0 auto;display:block;border-radius:8px">
+          <div style="margin-top:14px">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Ou copie o código:</div>
+            <div id="pix-code-text" style="background:var(--cream);border-radius:8px;padding:10px;font-size:11px;word-break:break-all;color:var(--text);font-family:monospace;max-height:60px;overflow:hidden"></div>
+            <button class="btn btn-outline btn-sm" onclick="copiarPix()" style="margin-top:8px;width:auto">📋 Copiar código Pix</button>
+          </div>
+          <div id="pix-timer" style="margin-top:12px;font-size:13px;color:var(--text-muted)">Expira em <strong id="pix-countdown">30:00</strong></div>
+          <div style="margin-top:12px;font-size:12px;color:var(--text-muted)">Aguardando confirmação do pagamento...</div>
+          <div style="margin-top:8px">
+            <div id="pix-status-dot" style="width:10px;height:10px;background:#f0a020;border-radius:50%;display:inline-block;animation:pulse 1.5s infinite"></div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-dark" id="btn-pagar" onclick="iniciarPagamento()" style="margin-top:4px">
+        🔐 Pagar e confirmar reserva
+      </button>
+    </div>
+    <div style="height:40px"></div>
+  </div>
+</div>
+
+<!-- ══════════════════ SCREEN: CONFIRMATION ══════════════════ -->
+<div class="screen" id="screen-confirmation">
+  <div class="page-wrap">
+    <div class="topbar">
+      <span class="topbar-brand">Bel<span>lu</span></span>
+    </div>
+
+    <div class="section" style="flex:1;align-items:center;text-align:center;padding-top:48px">
+      <div class="confirm-icon fade-up">✅</div>
+      <div class="fade-up fade-up-1">
+        <div class="section-title" style="font-size:24px;text-align:center">Agendamento confirmado!</div>
+        <p style="font-size:14px;color:var(--text-muted);margin-top:8px;line-height:1.6">Um link de confirmação foi enviado para o seu WhatsApp.</p>
+      </div>
+      <div class="card fade-up fade-up-2" style="width:100%;text-align:center;margin-top:8px">
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">Código da reserva</div>
+        <div class="confirm-code" id="conf-code">—</div>
+        <div class="confirm-sub" id="conf-details"></div>
+      </div>
+      <div class="card fade-up fade-up-3" style="width:100%;border-color:var(--gold);background:var(--gold-pale)">
+        <div style="font-size:13px;font-weight:600;color:var(--dark);margin-bottom:6px">💰 Saldo da reserva pago</div>
+        <div style="font-size:22px;font-weight:700;color:var(--warning)" id="conf-deposit"></div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Restante pago no salão no dia do atendimento.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;width:100%" class="fade-up">
+        <button class="btn btn-gold" onclick="goTo('screen-my-appointments')">Ver meus agendamentos</button>
+        <button class="btn btn-outline" onclick="goTo('screen-home')">Voltar ao início</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SCREEN: MY APPOINTMENTS ══════════════════ -->
+<div class="screen" id="screen-my-appointments">
+  <div class="page-wrap">
+    <div class="topbar">
+      <button class="topbar-back" onclick="goTo('screen-home')">← Início</button>
+      <span class="topbar-brand">Bel<span>lu</span></span>
+      <span style="width:60px"></span>
+    </div>
+
+    <div class="section">
+      <div class="section-title fade-up">Meus agendamentos</div>
+      <div id="my-appts" class="fade-up fade-up-1"></div>
+    </div>
+    <div style="height:40px"></div>
+  </div>
+</div>
+
+<!-- ══════════════════ SCREEN: ADMIN ══════════════════ -->
+<div class="screen" id="screen-admin">
+  <div class="page-wrap">
+    <div class="topbar">
+      <button class="topbar-back" onclick="goTo('screen-home')">← App</button>
+      <span style="font-family:'Playfair Display',serif;font-weight:700;font-size:16px;color:var(--dark)">Painel do Salão</span>
+      <span style="font-size:11px;padding:3px 10px;background:var(--gold-pale);color:var(--warning);border-radius:20px;font-weight:600">Admin</span>
+    </div>
+
+    <div class="section">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px" class="fade-up">
+        <div class="card admin-stat">
+          <div class="admin-stat-num" id="stat-today">0</div>
+          <div class="admin-stat-label">Hoje</div>
+        </div>
+        <div class="card admin-stat">
+          <div class="admin-stat-num" id="stat-week">0</div>
+          <div class="admin-stat-label">Esta semana</div>
+        </div>
+        <div class="card admin-stat">
+          <div class="admin-stat-num" id="stat-revenue">R$0</div>
+          <div class="admin-stat-label">Receita</div>
+        </div>
+      </div>
+
+      <div class="card fade-up fade-up-1">
+        <div style="font-size:14px;font-weight:600;color:var(--dark);margin-bottom:14px">📅 Agenda de hoje</div>
+        <div id="admin-today-list"></div>
+      </div>
+
+      <div class="card fade-up fade-up-2">
+        <div style="font-size:14px;font-weight:600;color:var(--dark);margin-bottom:14px">📋 Todos os agendamentos</div>
+        <div id="admin-all-list"></div>
+      </div>
+    </div>
+    <div style="height:40px"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+// ══════════════════ DATA ══════════════════
+const SERVICES = [
+  { id:1, cat:'Cabelo',   name:'Corte feminino',      desc:'Corte + finalização',                 price:85,  duration:60, icon:'✂️' },
+  { id:2, cat:'Cabelo',   name:'Coloração completa',  desc:'Cor + hidratação',                    price:220, duration:120,icon:'🎨' },
+  { id:3, cat:'Cabelo',   name:'Hidratação profunda', desc:'Tratamento intensivo',                price:90,  duration:60, icon:'💧' },
+  { id:4, cat:'Cabelo',   name:'Escova progressiva',  desc:'Alisamento + finalização',            price:180, duration:90, icon:'🌟' },
+  { id:5, cat:'Unhas',    name:'Manicure',            desc:'Corte, lixamento e esmalte',          price:45,  duration:45, icon:'💅' },
+  { id:6, cat:'Unhas',    name:'Pedicure',            desc:'Cuidado completo dos pés',            price:55,  duration:50, icon:'🦶' },
+  { id:7, cat:'Unhas',    name:'Gel / Acrigel',       desc:'Alongamento com gel ou acrigel',      price:120, duration:90, icon:'💎' },
+  { id:8, cat:'Estética', name:'Design de sobrancelha', desc:'Henna + design',                         price:65,  duration:40, icon:'✨' },
+  { id:9, cat:'Estética', name:'Limpeza de pele',     desc:'Extração + máscara',                  price:130, duration:75, icon:'🧴' },
+  { id:10,cat:'Estética', name:'Depilação',           desc:'Cera ou laser (consultar área)',      price:80,  duration:45, icon:'🌸' },
+];
+
+const PROFESSIONALS = [
+  { id:1, name:'Carla M.',    role:'Especialista em cabelos', color:'#F5C6BD', initials:'CM', rating:4.9, cats:['Cabelo','Estética'] },
+  { id:2, name:'Juliana R.',  role:'Colorista sênior',        color:'#C8D8F5', initials:'JR', rating:4.8, cats:['Cabelo'] },
+  { id:3, name:'Patrícia S.', role:'Manicure & Pedicure',     color:'#C8EDD8', initials:'PS', rating:5.0, cats:['Unhas'] },
+  { id:4, name:'Renata O.',   role:'Esteticista',             color:'#EDD6F0', initials:'RO', rating:4.7, cats:['Estética','Unhas'] },
+  { id:5, name:'Fernanda T.', role:'Especialista unhas',      color:'#FFF0C8', initials:'FT', rating:4.9, cats:['Unhas'] },
+];
+
+const TIME_SLOTS_TPL = ['08:00','08:30','09:00','09:30','10:00','10:30','11:00','11:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00','17:30','18:00'];
+const TAKEN = ['09:00','10:30','14:00','17:00'];
+
+// ══════════════════ STATE ══════════════════
+let state = {
+  selectedService: null,
+  selectedServices: [],
+  selectedProf: null,
+  selectedDate: null,
+  selectedTime: null,
+  currentCat: 'Cabelo',
+  currentMonth: new Date().getMonth(),
+  currentYear: new Date().getFullYear(),
+  payMethod: 'pix',
+  isLoggedIn: false,
+  user: null,
+  bookings: [],
+  _totalPrice: 0,
+  _totalDep: 0,
+};
+
+function deposit(price) { return Math.round(price * 0.10); }
+
+// ══════════════════ NAVIGATION ══════════════════
+function goTo(screenId) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(screenId).classList.add('active');
+  window.scrollTo(0,0);
+  if (screenId === 'screen-services') renderServices();
+  if (screenId === 'screen-professionals') renderProfessionals();
+  if (screenId === 'screen-schedule') renderCalendar();
+  if (screenId === 'screen-my-appointments') renderMyAppointments();
+  if (screenId === 'screen-admin') renderAdmin();
+  if (screenId === 'screen-checkout') renderCheckout();
+}
+
+function goAdmin() { goTo('screen-admin'); }
+
+// ══════════════════ HOME ══════════════════
+function renderHomeServices() {
+  const list = document.getElementById('service-list-home');
+  const featured = SERVICES.slice(0,3);
+  list.innerHTML = featured.map(s => `
+    <div class="card card-hover fade-up" onclick="quickBook(${s.id})" style="display:flex;align-items:center;gap:14px;padding:16px">
+      <span style="font-size:28px">${s.icon}</span>
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:600;color:var(--dark)">${s.name}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${s.desc} · ${s.duration}min</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-weight:700;font-size:15px;color:var(--dark)">R$ ${s.price}</div>
+        <div style="font-size:11px;color:var(--warning)">+${deposit(s.price)} reserva</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function quickBook(id) {
+  state.selectedService = SERVICES.find(s => s.id === id);
+  goTo('screen-professionals');
+}
+
+// ══════════════════ SERVICES (multi-seleção) ══════════════════
+const CATS = [...new Set(SERVICES.map(s => s.cat))];
+
+function renderServices() {
+  const tabs = document.getElementById('cat-tabs');
+  tabs.innerHTML = CATS.map(c => `
+    <button class="tab-btn ${c===state.currentCat?'active':''}" onclick="switchCat('${c}')">${c}</button>
+  `).join('');
+  renderServiceList();
+}
+
+function switchCat(cat) {
+  state.currentCat = cat;
+  renderServices();
+}
+
+function renderServiceList() {
+  const list = document.getElementById('service-list');
+  const filtered = SERVICES.filter(s => s.cat === state.currentCat);
+  const selectedIds = state.selectedServices ? state.selectedServices.map(s => s.id) : (state.selectedService ? [state.selectedService.id] : []);
+
+  list.innerHTML = filtered.map(s => {
+    const isSel = selectedIds.includes(s.id);
+    return `
+    <div class="card card-hover ${isSel?'selected':''}" onclick="toggleService(${s.id})" style="display:flex;align-items:center;gap:14px">
+      <div style="width:24px;height:24px;border-radius:6px;border:2px solid ${isSel?'var(--gold)':'var(--border)'};background:${isSel?'var(--gold)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s">
+        ${isSel?'<span style="color:var(--dark);font-size:14px;font-weight:700">✓</span>':''}
+      </div>
+      <span style="font-size:24px">${s.icon}</span>
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:600;color:var(--dark)">${s.name}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${s.desc}</div>
+        <div style="display:flex;gap:8px;margin-top:6px;align-items:center">
+          <span class="badge badge-gold">⏱ ${s.duration}min</span>
+        </div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-weight:700;font-size:17px;color:var(--dark)">R$ ${s.price}</div>
+        <div style="font-size:11px;color:var(--text-muted)">reserva: R$ ${deposit(s.price)}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Mostrar resumo dos selecionados
+  renderSelectedSummary();
+}
+
+function renderSelectedSummary() {
+  const services = state.selectedServices || (state.selectedService ? [state.selectedService] : []);
+  let bar = document.getElementById('selected-summary-bar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'selected-summary-bar';
+    const list = document.getElementById('service-list');
+    list.parentNode.insertBefore(bar, list);
+  }
+  if (services.length === 0) {
+    bar.innerHTML = '';
+    return;
+  }
+  const total = services.reduce((a, s) => a + s.price, 0);
+  const duracao = services.reduce((a, s) => a + s.duration, 0);
+  const dep = services.reduce((a, s) => a + deposit(s.price), 0);
+  bar.innerHTML = `
+    <div style="background:var(--gold-pale);border:1.5px solid var(--gold);border-radius:var(--radius-sm);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--dark)">${services.length} serviço${services.length>1?'s':''} selecionado${services.length>1?'s':''}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">⏱ ${duracao}min total · Reserva: R$ ${dep}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:16px;font-weight:700;color:var(--dark)">R$ ${total}</div>
+        <button onclick="confirmarServicos()" style="background:var(--gold);border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--dark);cursor:pointer;margin-top:4px">Continuar →</button>
+      </div>
+    </div>`;
+}
+
+function toggleService(id) {
+  if (!state.selectedServices) {
+    state.selectedServices = state.selectedService ? [state.selectedService] : [];
+  }
+  const idx = state.selectedServices.findIndex(s => s.id === id);
+  if (idx > -1) {
+    state.selectedServices.splice(idx, 1);
+  } else {
+    const svc = SERVICES.find(s => s.id === id);
+    state.selectedServices.push(svc);
+  }
+  // Manter compatibilidade com código que usa selectedService
+  state.selectedService = state.selectedServices.length > 0 ? state.selectedServices[0] : null;
+  renderServiceList();
+}
+
+function confirmarServicos() {
+  if (!state.selectedServices || state.selectedServices.length === 0) {
+    showToast('⚠️ Selecione pelo menos um serviço');
+    return;
+  }
+  goTo('screen-professionals');
+}
+
+function selectService(id) {
+  toggleService(id);
+}
+
+// ══════════════════ PROFESSIONALS ══════════════════
+function renderProfessionals() {
+  const cat = state.selectedService ? state.selectedService.cat : null;
+  const profs = cat ? PROFESSIONALS.filter(p => p.cats.includes(cat)) : PROFESSIONALS;
+  const list = document.getElementById('prof-list');
+  list.innerHTML = profs.map(p => `
+    <div class="prof-card ${state.selectedProf && state.selectedProf.id===p.id?'selected':''}" onclick="selectProf(${p.id})">
+      <div class="prof-avatar-wrap">
+        <div class="prof-avatar" style="background:${p.color}">${p.initials}</div>
+        <div class="prof-dot"></div>
+      </div>
+      <div class="prof-name">${p.name}</div>
+      <div class="prof-role">${p.role}</div>
+      <div style="font-size:11px;color:var(--warning);margin-top:3px">★ ${p.rating}</div>
+    </div>
+  `).join('');
+  updateProfDetail();
+}
+
+function selectProf(id) {
+  state.selectedProf = PROFESSIONALS.find(p => p.id === id);
+  renderProfessionals();
+  document.getElementById('btn-to-schedule').disabled = false;
+}
+
+function updateProfDetail() {
+  const detail = document.getElementById('prof-detail');
+  if (!state.selectedProf) { detail.style.display='none'; return; }
+  const p = state.selectedProf;
+  detail.style.display = 'block';
+  detail.innerHTML = `
+    <div class="card" style="display:flex;align-items:center;gap:14px">
+      <div class="avatar" style="background:${p.color};font-size:18px;width:52px;height:52px">${p.initials}</div>
+      <div>
+        <div style="font-size:15px;font-weight:600;color:var(--dark)">${p.name}</div>
+        <div style="font-size:13px;color:var(--text-muted)">${p.role}</div>
+        <div style="font-size:12px;color:var(--warning);margin-top:4px">★ ${p.rating} · Disponível hoje</div>
+      </div>
+    </div>
+  `;
+}
+
+// ══════════════════ CALENDAR ══════════════════
+const WEEKDAYS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function renderCalendar() {
+  const h = document.getElementById('cal-header');
+  h.innerHTML = `
+    <button onclick="prevMonth()" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--text-muted);padding:4px">‹</button>
+    <span style="font-size:15px;font-weight:600;color:var(--dark)">${MONTHS[state.currentMonth]} ${state.currentYear}</span>
+    <button onclick="nextMonth()" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--text-muted);padding:4px">›</button>
+  `;
+  const wdEl = document.getElementById('cal-weekdays');
+  wdEl.innerHTML = WEEKDAYS.map(d => `<div class="cal-day-label">${d}</div>`).join('');
+  const daysEl = document.getElementById('cal-days');
+  const first = new Date(state.currentYear, state.currentMonth, 1).getDay();
+  const daysInMonth = new Date(state.currentYear, state.currentMonth+1, 0).getDate();
+  const today = new Date(); today.setHours(0,0,0,0);
+  let html = '';
+  for(let i=0;i<first;i++) html += '<div class="cal-day empty"></div>';
+  for(let d=1;d<=daysInMonth;d++) {
+    const date = new Date(state.currentYear, state.currentMonth, d);
+    const isPast = date < today;
+    const isSun = date.getDay()===0;
+    const isToday = date.toDateString()===today.toDateString();
+    const isSel = state.selectedDate && date.toDateString()===state.selectedDate.toDateString();
+    const disabled = isPast || isSun;
+    html += `<div class="cal-day ${isToday?'today':''} ${isSel?'selected':''} ${disabled?'disabled':''}" 
+              ${!disabled?`onclick="selectDate(${d})"`:''}>${d}</div>`;
+  }
+  daysEl.innerHTML = html;
+}
+
+function prevMonth() {
+  if(state.currentMonth===0){state.currentMonth=11;state.currentYear--;}
+  else state.currentMonth--;
+  state.selectedDate=null; state.selectedTime=null;
+  renderCalendar();
+  hideTimeSection();
+}
+function nextMonth() {
+  if(state.currentMonth===11){state.currentMonth=0;state.currentYear++;}
+  else state.currentMonth++;
+  state.selectedDate=null; state.selectedTime=null;
+  renderCalendar();
+  hideTimeSection();
+}
+
+function selectDate(d) {
+  state.selectedDate = new Date(state.currentYear, state.currentMonth, d);
+  state.selectedTime = null;
+  renderCalendar();
+  renderTimeSlots();
+  document.getElementById('btn-to-payment').disabled = true;
+}
+
+function hideTimeSection() {
+  document.getElementById('time-section').style.display='none';
+}
+
+function renderTimeSlots() {
+  const ts = document.getElementById('time-section');
+  ts.style.display='block';
+  const sub = document.getElementById('time-sub');
+  const wd = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  sub.textContent = `${wd[state.selectedDate.getDay()]}, ${state.selectedDate.getDate()} de ${MONTHS[state.selectedDate.getMonth()]}`;
+  const grid = document.getElementById('time-slots');
+  grid.innerHTML = TIME_SLOTS_TPL.map(t => {
+    const isTaken = TAKEN.includes(t);
+    const isSel = state.selectedTime===t;
+    return `<div class="time-slot ${isTaken?'taken':''} ${isSel?'selected':''}" 
+             ${!isTaken?`onclick="selectTime('${t}')"`:''}>${t}</div>`;
+  }).join('');
+}
+
+function selectTime(t) {
+  state.selectedTime = t;
+  renderTimeSlots();
+  document.getElementById('btn-to-payment').disabled = false;
+}
+
+// ══════════════════ CHECKOUT ══════════════════
+// ══════════════════ CONFIG MERCADO PAGO ══════════════════
+// ⚠️ Troque pela sua chave PÚBLICA (começa com TEST- para sandbox)
+// Obtenha em: mercadopago.com.br/developers/panel/app
+var MP_PUBLIC_KEY = 'TEST-f955d34e-4bb5-467c-aca7-6d49dd9ce8ca';
+
+// URL do seu backend (Vercel, Railway, etc.)
+// Em desenvolvimento local: 'http://localhost:3000'
+var BACKEND_URL = 'https://bellu-backend.vercel.app';
+
+var mp = null;
+var mpCardFields = null;
+var pixCheckInterval = null;
+var pixCountdownInterval = null;
+var currentPixPaymentId = null;
+
+function initMP() {
+  if (typeof MercadoPago === 'undefined') {
+    console.warn('[MP] SDK não carregado — modo demo ativo');
+    return;
+  }
+  mp = new MercadoPago(MP_PUBLIC_KEY, { locale: 'pt-BR' });
+}
+
+// ══════════════════ CHECKOUT (integrado MP) ══════════════════
+function goCheckout() {
+  if(!state.selectedService || !state.selectedProf || !state.selectedDate || !state.selectedTime) {
+    showToast('⚠️ Selecione serviço, profissional, data e horário');
+    return;
+  }
+  // Reset estado do checkout
+  document.getElementById('payment-loading').style.display = 'none';
+  document.getElementById('payment-error').style.display   = 'none';
+  document.getElementById('pix-qr-section').style.display  = 'none';
+  document.getElementById('card-form-section').style.display = 'none';
+  document.getElementById('btn-pagar').style.display = 'block';
+  document.getElementById('guest-name').value  = '';
+  document.getElementById('guest-email').value = '';
+  document.getElementById('guest-phone').value = '';
+  document.getElementById('guest-cpf').value   = '';
+  selectPay('pix');
+  goTo('screen-checkout');
+}
+
+function renderCheckout() {
+  const services = state.selectedServices && state.selectedServices.length > 0
+    ? state.selectedServices
+    : (state.selectedService ? [state.selectedService] : []);
+  const p = state.selectedProf;
+  const d = state.selectedDate;
+  const t = state.selectedTime;
+  if(!services.length||!p||!d||!t) return;
+
+  const totalPrice = services.reduce((a, s) => a + s.price, 0);
+  const totalDep   = services.reduce((a, s) => a + deposit(s.price), 0);
+  const totalDur   = services.reduce((a, s) => a + s.duration, 0);
+
+  // Guarda o total para usar no pagamento
+  state._totalPrice = totalPrice;
+  state._totalDep   = totalDep;
+
+  document.getElementById('deposit-val').textContent = 'R$ ' + totalDep;
+
+  const wd = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  const dateStr = `${wd[d.getDay()]}, ${d.getDate()} de ${MONTHS[d.getMonth()]}`;
+
+  const servicosHtml = services.map(s =>
+    `<div class="summary-row"><span class="summary-key">${s.icon} ${s.name}</span><span class="summary-val">R$ ${s.price}</span></div>`
+  ).join('');
+
+  document.getElementById('checkout-summary').innerHTML = `
+    <div style="font-size:14px;font-weight:600;color:var(--dark);margin-bottom:14px">Resumo do agendamento</div>
+    ${servicosHtml}
+    <div class="summary-row"><span class="summary-key">⏱ Duração total</span><span class="summary-val">${totalDur} min</span></div>
+    <div class="summary-row"><span class="summary-key">Profissional</span><span class="summary-val">${p.name}</span></div>
+    <div class="summary-row"><span class="summary-key">Data e hora</span><span class="summary-val">${dateStr}<br>${t}</span></div>
+    <div class="summary-row"><span class="summary-key">Valor total</span><span class="summary-val">R$ ${totalPrice}</span></div>
+    <div class="summary-row summary-total">
+      <span class="summary-key">🔒 Pagar agora (reserva 10%)</span>
+      <span class="summary-val" style="color:var(--warning)">R$ ${totalDep}</span>
+    </div>`;
+}
+
+function row(k, v) {
+  return '<div class="summary-row"><span class="summary-key">'+k+'</span><span class="summary-val">'+v+'</span></div>';
+}
+
+// ── Selecionar método de pagamento ──
+function selectPay(method) {
+  state.payMethod = method;
+  var isPix  = method === 'pix';
+  document.getElementById('pay-pix').classList.toggle('selected', isPix);
+  document.getElementById('pay-card').classList.toggle('selected', !isPix);
+  document.getElementById('check-pix').style.opacity  = isPix ? '1' : '0';
+  document.getElementById('check-card').style.opacity = isPix ? '0' : '1';
+
+  var cardSection = document.getElementById('card-form-section');
+  if (!isPix) {
+    cardSection.style.display = 'block';
+    mountCardFields();
+  } else {
+    cardSection.style.display = 'none';
+    if (mpCardFields) { try { mpCardFields.unmount(); } catch(e){} mpCardFields = null; }
+  }
+}
+
+// ── Montar campos seguros do cartão via MP.js ──
+function mountCardFields() {
+  if (!mp || mpCardFields) return;
+  try {
+    var cardNumberField = mp.fields.create('cardNumber', { placeholder: '0000 0000 0000 0000' }).mount('mp-card-number');
+    mp.fields.create('expirationDate', { placeholder: 'MM/AA' }).mount('mp-expiration-date');
+    mp.fields.create('securityCode',   { placeholder: 'CVV'   }).mount('mp-security-code');
+    mpCardFields = cardNumberField;
+    cardNumberField.on('binChange', function(data) {
+      if (data.bin && data.bin.length >= 6) {
+        mp.getInstallments({ amount: String(state._totalDep || 10), bin: data.bin, paymentTypeId: 'credit_card' })
+          .then(function(res) {
+            var sel = document.getElementById('card-installments');
+            sel.innerHTML = '';
+            if (res && res[0] && res[0].payer_costs) {
+              res[0].payer_costs.forEach(function(p) {
+                var opt = document.createElement('option');
+                opt.value = p.installments;
+                opt.textContent = p.recommended_message;
+                sel.appendChild(opt);
+              });
+            }
+          }).catch(function(){});
+      }
+    });
+  } catch(e) {
+    console.error('[MP] Erro ao montar campos:', e);
+    mpCardFields = null;
+  }
+}
+
+// ── Validar dados do cliente ──
+function validarFormCliente() {
+  var nome  = document.getElementById('guest-name').value.trim();
+  var email = document.getElementById('guest-email').value.trim();
+  var cpf   = document.getElementById('guest-cpf').value.replace(/\D/g,'');
+
+  if (nome.length < 3)             { showToast('⚠️ Digite seu nome completo'); return false; }
+  if (!email.includes('@'))        { showToast('⚠️ Email inválido'); return false; }
+  if (cpf.length !== 11)           { showToast('⚠️ CPF inválido — apenas 11 dígitos'); return false; }
+  return true;
+}
+
+// ── Iniciar pagamento (dispatcher) ──
+function iniciarPagamento() {
+  if (!validarFormCliente()) return;
+  if (state.payMethod === 'pix') {
+    iniciarPix();
+  } else {
+    iniciarCartao();
+  }
+}
+
+// ── Pagamento Pix ──
+function iniciarPix() {
+  const dep = state._totalDep || deposit(state.selectedService ? state.selectedService.price : 0);
+  mostrarLoading('Gerando QR Code Pix...');
+  document.getElementById('btn-pagar').style.display = 'none';
+
+  var reservaId = 'BL' + Math.floor(Math.random()*90000+10000);
+
+  fetch(BACKEND_URL + '/api/pagamento/pix', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      valor:        dep,
+      nomeCliente:  document.getElementById('guest-name').value.trim(),
+      emailCliente: document.getElementById('guest-email').value.trim(),
+      cpfCliente:   document.getElementById('guest-cpf').value,
+      telefone:     document.getElementById('guest-phone').value,
+      reservaId:    reservaId
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    ocultarLoading();
+    if (data.erro) { mostrarErro(data.erro); document.getElementById('btn-pagar').style.display='block'; return; }
+
+    currentPixPaymentId = data.pagamentoId;
+    mostrarQrPix(data, reservaId, dep);
+    iniciarContadorPix(30 * 60);
+    iniciarPollingPix(data.pagamentoId, reservaId);
+  })
+  .catch(function(err) {
+    ocultarLoading();
+    // Modo demo — backend não configurado
+    mostrarQrPixDemo(reservaId, dep);
+    document.getElementById('btn-pagar').style.display = 'none';
+    console.warn('[PIX] Backend não encontrado — modo demo:', err.message);
+  });
+}
+
+function mostrarQrPix(data, reservaId, dep) {
+  var sec = document.getElementById('pix-qr-section');
+  sec.style.display = 'block';
+  if (data.qrCodeBase64) {
+    document.getElementById('pix-qr-img').src = 'data:image/png;base64,' + data.qrCodeBase64;
+  }
+  document.getElementById('pix-code-text').textContent = data.qrCode || '';
+  sec.setAttribute('data-reserva-id', reservaId);
+  sec.setAttribute('data-dep', dep);
+}
+
+function mostrarQrPixDemo(reservaId, dep) {
+  var sec = document.getElementById('pix-qr-section');
+  sec.style.display = 'block';
+  // QR demo para teste visual
+  document.getElementById('pix-qr-img').src = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=DEMO-BELLU-PIX-' + reservaId;
+  document.getElementById('pix-code-text').textContent = '00020101021226580014BR.GOV.BCB.PIX0136DEMO-BELLU-' + reservaId + '5204000053039865406' + dep + '5802BR5906Bellu6009SAO PAULO62140510' + reservaId + '6304DEMO';
+  sec.setAttribute('data-reserva-id', reservaId);
+  sec.setAttribute('data-dep', dep);
+  document.getElementById('sandbox-banner').innerHTML = '✅ <strong>Modo demo.</strong> Clique em "Confirmar pagamento Pix recebido" para simular confirmação.';
+
+  // botão para simular confirmação no demo
+  var btnDemo = document.createElement('button');
+  btnDemo.className = 'btn btn-gold btn-sm';
+  btnDemo.style.marginTop = '12px';
+  btnDemo.textContent = '✓ Simular Pix confirmado (demo)';
+  btnDemo.onclick = function() {
+    var rId = sec.getAttribute('data-reserva-id');
+    var d   = sec.getAttribute('data-dep');
+    confirmarAgendamento(rId, parseInt(d));
+  };
+  sec.appendChild(btnDemo);
+  iniciarContadorPix(30 * 60);
+}
+
+function iniciarPollingPix(pagamentoId, reservaId) {
+  var tentativas = 0;
+  pixCheckInterval = setInterval(function() {
+    tentativas++;
+    if (tentativas > 60) { clearInterval(pixCheckInterval); return; } // máx 5min
+
+    fetch(BACKEND_URL + '/api/pagamento/status/' + pagamentoId)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.aprovado) {
+          clearInterval(pixCheckInterval);
+          clearInterval(pixCountdownInterval);
+          var dep = parseInt(document.getElementById('pix-qr-section').getAttribute('data-dep'));
+          confirmarAgendamento(reservaId, dep);
+        }
+      })
+      .catch(function() {});
+  }, 5000);
+}
+
+function iniciarContadorPix(segundos) {
+  var restante = segundos;
+  pixCountdownInterval = setInterval(function() {
+    restante--;
+    var min = Math.floor(restante / 60);
+    var seg = restante % 60;
+    var el = document.getElementById('pix-countdown');
+    if (el) el.textContent = (min < 10 ? '0' : '') + min + ':' + (seg < 10 ? '0' : '') + seg;
+    if (restante <= 0) {
+      clearInterval(pixCountdownInterval);
+      mostrarErro('Tempo do Pix expirado. Por favor, tente novamente.');
+      document.getElementById('pix-qr-section').style.display = 'none';
+      document.getElementById('btn-pagar').style.display = 'block';
+    }
+  }, 1000);
+}
+
+function copiarPix() {
+  var codigo = document.getElementById('pix-code-text').textContent;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(codigo).then(function() {
+      showToast('📋 Código Pix copiado!', true);
+    });
+  } else {
+    // fallback para browsers antigos
+    var el = document.createElement('textarea');
+    el.value = codigo;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+    showToast('📋 Código Pix copiado!', true);
+  }
+}
+
+// ── Pagamento Cartão ──
+function iniciarCartao() {
+  if (!mp) {
+    // modo demo — sem SDK
+    mostrarLoading('Processando cartão...');
+    document.getElementById('btn-pagar').style.display = 'none';
+    setTimeout(function() {
+      ocultarLoading();
+      var reservaId = 'BL' + Math.floor(Math.random()*90000+10000);
+      var dep = state._totalDep || deposit(state.selectedService ? state.selectedService.price : 0);
+      confirmarAgendamento(reservaId, dep);
+    }, 2000);
+    return;
+  }
+
+  var holderName = document.getElementById('card-holder-name').value.trim();
+  if (!holderName) { showToast('⚠️ Digite o nome no cartão'); return; }
+
+  mostrarLoading('Processando cartão...');
+  document.getElementById('btn-pagar').style.display = 'none';
+
+  mp.createCardToken({
+    cardholderName: holderName,
+    identificationType: 'CPF',
+    identificationNumber: document.getElementById('guest-cpf').value.replace(/\D/g,'')
+  })
+  .then(function(token) {
+    var dep          = state._totalDep || deposit(state.selectedService ? state.selectedService.price : 0);
+    var reservaId    = 'BL' + Math.floor(Math.random()*90000+10000);
+    var installments = document.getElementById('card-installments').value;
+
+    return fetch(BACKEND_URL + '/api/pagamento/cartao', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token:           token.id,
+        parcelas:        installments,
+        issuerId:        token.issuer_id,
+        paymentMethodId: token.payment_method_id,
+        valor:           dep,
+        nomeCliente:     document.getElementById('guest-name').value.trim(),
+        emailCliente:    document.getElementById('guest-email').value.trim(),
+        cpfCliente:      document.getElementById('guest-cpf').value,
+        reservaId:       reservaId,
+        _reservaId:      reservaId,
+        _dep:            dep
+      })
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      ocultarLoading();
+      if (data.aprovado || data.pendente) {
+        confirmarAgendamento(reservaId, dep);
+      } else {
+        mostrarErro(data.mensagem || 'Cartão não aprovado. Verifique os dados.');
+        document.getElementById('btn-pagar').style.display = 'block';
+      }
+    });
+  })
+  .catch(function(err) {
+    ocultarLoading();
+    mostrarErro('Erro ao processar cartão: ' + (err.message || 'verifique os dados e tente novamente.'));
+    document.getElementById('btn-pagar').style.display = 'block';
+  });
+}
+
+// ── Confirmar agendamento (pós-pagamento aprovado) ──
+function confirmarAgendamento(reservaId, dep) {
+  if (pixCheckInterval)     clearInterval(pixCheckInterval);
+  if (pixCountdownInterval) clearInterval(pixCountdownInterval);
+
+  const services = state.selectedServices && state.selectedServices.length > 0
+    ? state.selectedServices
+    : (state.selectedService ? [state.selectedService] : []);
+
+  const booking = {
+    id:        reservaId,
+    services:  services,
+    service:   services[0], // compatibilidade
+    prof:      state.selectedProf,
+    date:      state.selectedDate,
+    time:      state.selectedTime,
+    deposit:   dep,
+    totalPrice: state._totalPrice || (services[0] ? services[0].price : 0),
+    status:    'confirmado',
+    user: {
+      name:  document.getElementById('guest-name').value.trim()  || 'Cliente',
+      email: document.getElementById('guest-email').value.trim() || '',
+      phone: document.getElementById('guest-phone').value.trim() || ''
+    },
+    createdAt: new Date()
+  };
+  state.bookings.push(booking);
+
+  document.getElementById('conf-code').textContent = booking.id;
+  const wd = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  const nomesServicos = services.map(s => s.icon + ' ' + s.name).join('<br>');
+  document.getElementById('conf-details').innerHTML =
+    nomesServicos + '<br>'
+    + wd[booking.date.getDay()] + ', ' + booking.date.getDate() + ' de ' + MONTHS[booking.date.getMonth()] + ' às ' + booking.time + '<br>'
+    + 'Profissional: ' + booking.prof.name;
+  document.getElementById('conf-deposit').textContent = 'R$ ' + booking.deposit;
+
+  state.selectedService  = null;
+  state.selectedServices = [];
+  state.selectedProf     = null;
+  state.selectedDate     = null;
+  state.selectedTime     = null;
+  state._totalPrice      = 0;
+  state._totalDep        = 0;
+
+  goTo('screen-confirmation');
+  showToast('✅ Agendamento confirmado!', true);
+}
+
+// ── Helpers de UI ──
+function mostrarLoading(msg) {
+  document.getElementById('payment-error').style.display   = 'none';
+  document.getElementById('payment-loading-msg').textContent = msg || 'Processando...';
+  document.getElementById('payment-loading').style.display  = 'block';
+}
+function ocultarLoading() {
+  document.getElementById('payment-loading').style.display = 'none';
+}
+function mostrarErro(msg) {
+  var el = document.getElementById('payment-error');
+  el.textContent = '⚠️ ' + msg;
+  el.style.display = 'block';
+}
+
+// ── Remover confirmBooking antigo (agora tudo via iniciarPagamento) ──
+function confirmBooking() { iniciarPagamento(); }
+
+function completePix() {
+  // Mantido por compatibilidade — redireciona para novo fluxo
+  var sec = document.getElementById('pix-qr-section');
+  var rId = sec ? sec.getAttribute('data-reserva-id') : ('BL'+Math.floor(Math.random()*90000+10000));
+  var dep = sec ? parseInt(sec.getAttribute('data-dep')) : deposit(state.selectedService ? state.selectedService.price : 0);
+  confirmarAgendamento(rId, dep);
+}
+
+function openModal()  { /* removido — fluxo agora via MP */ }
+function closeModal() { /* removido — fluxo agora via MP */ }
+
+
+// ══════════════════ MY APPOINTMENTS ══════════════════
+function renderMyAppointments() {
+  const el = document.getElementById('my-appts');
+  if(state.bookings.length === 0) {
+    el.innerHTML = `
+      <div style="text-align:center;padding:40px 20px;color:var(--text-muted)">
+        <div style="font-size:48px;margin-bottom:12px">📅</div>
+        <div style="font-size:16px;font-weight:500;margin-bottom:8px">Nenhum agendamento ainda</div>
+        <div style="font-size:13px;margin-bottom:20px">Agende seu primeiro serviço agora</div>
+        <button class="btn btn-gold" onclick="goTo('screen-services')" style="width:auto;padding:12px 24px">Agendar agora</button>
+      </div>`;
+    return;
+  }
+  const wd = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  el.innerHTML = state.bookings.map(b => `
+    <div class="card" style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <span class="badge ${b.status==='cancelado'?'badge-danger':'badge-success'}">${b.status==='cancelado'?'✗':'✓'} ${b.status}</span>
+        <span style="font-size:12px;font-weight:600;color:var(--text-muted)">${b.id}</span>
+      </div>
+      <div style="font-size:16px;font-weight:700;color:var(--dark);margin-bottom:4px">${b.service.icon} ${b.service.name}</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:10px">${wd[b.date.getDay()]}, ${b.date.getDate()} de ${MONTHS[b.date.getMonth()]} às ${b.time} · ${b.prof.name}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;background:var(--cream);border-radius:8px;padding:10px 12px">
+        <div>
+          <div style="font-size:11px;color:var(--text-muted)">Pago (reserva)</div>
+          <div style="font-size:15px;font-weight:700;color:var(--warning)">R$ ${b.deposit}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:var(--text-muted)">Restante no salão</div>
+          <div style="font-size:15px;font-weight:700;color:var(--dark)">R$ ${b.service.price - b.deposit}</div>
+        </div>
+      </div>
+      <button class="btn btn-outline btn-sm" style="margin-top:10px;color:var(--danger);border-color:var(--danger)" onclick="cancelBooking('${b.id}')">
+        Cancelar agendamento
+      </button>
+    </div>
+  `).join('');
+}
+
+function cancelBooking(id) {
+  const b = state.bookings.find(b => b.id===id);
+  if(!b) return;
+  const now = new Date();
+  const diff = (b.date - now) / 3600000;
+  let msg;
+  if(diff > 24) msg = `Reembolso total de R$ ${b.deposit} processado em até 2 dias úteis.`;
+  else if(diff > 2) msg = `Reembolso parcial (50%): R$ ${Math.round(b.deposit/2)} em até 2 dias úteis.`;
+  else msg = 'Sem reembolso — cancelamento com menos de 2h de antecedência.';
+  if(confirm(`Cancelar agendamento ${id}?\n\n${msg}`)) {
+    b.status = 'cancelado';
+    renderMyAppointments();
+    showToast('Agendamento cancelado');
+  }
+}
+
+// ══════════════════ ADMIN ══════════════════
+function renderAdmin() {
+  const all = state.bookings.filter(b => b.status==='confirmado');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayBkgs = all.filter(b => b.date.toDateString()===today.toDateString());
+  const weekAgo = new Date(today); weekAgo.setDate(weekAgo.getDate()-7);
+  const weekBkgs = all.filter(b => b.date >= weekAgo);
+  const revenue = all.reduce((acc,b) => acc + b.service.price, 0);
+
+  document.getElementById('stat-today').textContent = todayBkgs.length;
+  document.getElementById('stat-week').textContent = weekBkgs.length;
+  document.getElementById('stat-revenue').textContent = 'R$' + revenue;
+
+  const wd = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+  const todayHtml = todayBkgs.length === 0
+    ? '<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:13px">Nenhum agendamento hoje</div>'
+    : todayBkgs.map(b => apptRowHtml(b, wd)).join('');
+
+  const allHtml = all.length === 0
+    ? '<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:13px">Nenhum agendamento ainda.<br><small>Aguardando reservas dos clientes.</small></div>'
+    : all.map(b => apptRowHtml(b, wd)).join('');
+
+  document.getElementById('admin-today-list').innerHTML = todayHtml;
+  document.getElementById('admin-all-list').innerHTML = allHtml;
+}
+
+function apptRowHtml(b, wd) {
+  return `
+    <div class="appt-row">
+      <div class="avatar" style="background:${b.prof.color};font-size:13px;width:40px;height:40px">${b.prof.initials}</div>
+      <div class="appt-info">
+        <div class="appt-name">${b.user ? b.user.name : 'Cliente'}</div>
+        <div class="appt-detail">${b.service.icon} ${b.service.name} · ${b.prof.name}</div>
+        <div style="margin-top:4px"><span class="badge badge-gold">R$ ${b.deposit} pago</span></div>
+      </div>
+      <div class="appt-time">
+        <div>${wd[b.date.getDay()]} ${b.date.getDate()}/${b.date.getMonth()+1}</div>
+        <div style="color:var(--gold);font-size:14px">${b.time}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${b.id}</div>
+      </div>
+    </div>
+  `;
+}
+
+// ══════════════════ AUTH ══════════════════
+function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const phone = document.getElementById('login-phone').value.trim();
+  if(!email && !phone) { showToast('⚠️ Preencha email ou telefone'); return; }
+  state.isLoggedIn = true;
+  state.user = { name: 'Cliente', email, phone };
+  showToast('✅ Login realizado!', true);
+  goTo('screen-my-appointments');
+}
+
+function doRegister() {
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const phone = document.getElementById('reg-phone').value.trim();
+  if(!name||!phone) { showToast('⚠️ Nome e telefone são obrigatórios'); return; }
+  state.isLoggedIn = true;
+  state.user = { name, email, phone };
+  showToast('✅ Conta criada com sucesso!', true);
+  goTo('screen-services');
+}
+
+// ══════════════════ TOAST ══════════════════
+function showToast(msg, success=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (success?' toast-success':'');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+// ══════════════════ INIT ══════════════════
+renderHomeServices();
+initMP();
+// ── expõe todas as funções usadas em onclick inline ──
+window.toggleService      = toggleService;
+window.confirmarServicos  = confirmarServicos;
+window.goTo              = goTo;
+window.goAdmin           = goAdmin;
+window.goCheckout        = goCheckout;
+window.quickBook         = quickBook;
+window.switchCat         = switchCat;
+window.selectService     = selectService;
+window.selectProf        = selectProf;
+window.prevMonth         = prevMonth;
+window.nextMonth         = nextMonth;
+window.selectDate        = selectDate;
+window.selectTime        = selectTime;
+window.selectPay         = selectPay;
+window.iniciarPagamento  = iniciarPagamento;
+window.confirmBooking    = confirmBooking;
+window.completePix       = completePix;
+window.copiarPix         = copiarPix;
+window.openModal         = openModal;
+window.closeModal        = closeModal;
+window.cancelBooking     = cancelBooking;
+window.doLogin           = doLogin;
+window.doRegister        = doRegister;
+}); // end DOMContentLoaded
+</script>
+</body>
+</html>
